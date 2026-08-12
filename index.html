@@ -16,6 +16,7 @@
     --brand:#016753;
     --brand-dark:#00291F;
     --gold:#AA8A0F;
+    --grid:1fr 92px 64px 150px 150px;
   }
 
   *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -50,7 +51,6 @@
   .w-cliente{width:150px}
   .w-numero{width:74px}
   .w-fecha{width:110px}
-  .w-money{width:96px}
   .w-pct{width:62px}
 
   .switch{position:relative;display:inline-block;width:38px;height:22px;flex:none}
@@ -83,12 +83,22 @@
   }
   .hint b{color:var(--brand);font-weight:600}
 
+  .warn{
+    width:100%;margin:0;padding:8px 12px;border-radius:8px;
+    background:#FBEEE1;border:1px solid #E8C9A6;color:#8A4B0C;
+    font-size:12.5px;
+    font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  }
+
   /* ---------- Pages ---------- */
   #doc{display:flex;flex-direction:column;align-items:center;gap:24px;padding:28px 16px 56px}
   .page{
     width:8.5in;height:11in;flex:none;
-    background:#fff;overflow:hidden;position:relative;
+    background:#fff;position:relative;
     box-shadow:0 6px 28px rgba(0,0,0,.18);
+    /* Visible on screen so overflowing content and the row controls that hang
+       off the sheet are actually seen; clipped when printing. */
+    overflow:visible;
   }
   .page a{color:var(--brand)}
   /* The document markup sizes the logo the way the original design did, where
@@ -97,30 +107,60 @@
   [data-logo]{box-sizing:content-box}
 
   /* ---------- In-place editable text ---------- */
-  [data-t]{
+  [data-t],[data-cell]{
     border-radius:2px;
     transition:background .12s,box-shadow .12s;
     cursor:text;
   }
-  [data-t]:hover{background:rgba(170,138,15,.18)}
-  [data-t]:focus{
+  [data-t]:hover,[data-cell]:hover{background:rgba(170,138,15,.18)}
+  [data-t]:focus,[data-cell]:focus{
     outline:none;
     background:rgba(170,138,15,.14);
     box-shadow:0 0 0 2px rgba(1,103,83,.55);
   }
   /* Keep an emptied field clickable instead of collapsing to zero width. */
-  [data-t]:empty::before{content:"·····";opacity:.3}
+  [data-t]:empty::before,[data-cell]:empty::before{content:"·····";opacity:.3}
+
+  /* Without this the blocks inside a full sheet quietly compress to fit instead
+     of overflowing, which both distorts the layout and hides the fact that the
+     content no longer fits on the printed page. */
+  [data-flow] > *{flex-shrink:0}
+
+  /* ---------- Line item controls (screen only) ---------- */
+  .lines{position:relative}
+  .line{position:relative}
+  .line-del{
+    position:absolute;right:-34px;top:50%;transform:translateY(-50%);
+    width:24px;height:24px;line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid #e2e2dc;border-radius:50%;background:#fff;color:#9a9a94;
+    font-size:15px;cursor:pointer;opacity:0;transition:opacity .15s,color .15s,border-color .15s;
+    font-family:ui-sans-serif,system-ui,sans-serif;
+  }
+  .line:hover .line-del{opacity:1}
+  .line-del:hover{color:#B3261E;border-color:#B3261E}
+  .line-add{
+    position:absolute;left:0;top:100%;margin-top:8px;
+    font:inherit;font-size:12.5px;font-weight:600;
+    font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 14px;border-radius:999px;cursor:pointer;
+    background:#f3f3f0;border:1px dashed #c9c9c2;color:#5C5C5C;
+    transition:border-color .15s,color .15s,background .15s;
+  }
+  .line-add:hover{border-color:var(--brand);color:var(--brand);background:#fff}
 
   @page{size:letter;margin:0}
   @media print{
     body{background:#fff}
     .toolbar{display:none !important}
     #doc{display:block;padding:0;gap:0}
-    .page{box-shadow:none;margin:0;break-after:page;page-break-after:always}
+    .page{box-shadow:none;margin:0;overflow:hidden;break-after:page;page-break-after:always}
     .page.last-page{break-after:auto;page-break-after:auto}
     /* No trace of the editing affordances in the PDF. */
-    [data-t]{background:none !important;box-shadow:none !important;outline:none !important}
-    [data-t]:empty::before{content:"" !important}
+    [data-t],[data-cell]{background:none !important;box-shadow:none !important;outline:none !important}
+    [data-t]:empty::before,[data-cell]:empty::before{content:"" !important}
+    .line-del,.line-add{display:none !important}
   }
 </style>
 </head>
@@ -138,18 +178,6 @@
   <div class="field">
     <span class="lbl">fecha</span>
     <input id="f-fecha" class="w-fecha" type="text" data-field="fecha" autocomplete="off" placeholder="dd/mm/aaaa">
-  </div>
-  <div class="field">
-    <span class="lbl">costoQuincenal</span>
-    <input id="f-costoQuincenal" class="w-money" type="number" min="0" step="100" data-field="costoQuincenal">
-  </div>
-  <div class="field is-switch">
-    <span class="lbl">línea 2</span>
-    <label class="switch"><input type="checkbox" data-field="linea2"><span class="slider"></span></label>
-  </div>
-  <div class="field">
-    <span class="lbl">costoQuincenal2</span>
-    <input id="f-costoQuincenal2" class="w-money" type="number" min="0" step="100" data-field="costoQuincenal2">
   </div>
   <div class="field">
     <span class="lbl">IVA %</span>
@@ -175,8 +203,14 @@
 
   <p class="hint">
     <b>Todo el texto del documento es editable:</b> hacé clic sobre cualquier
-    párrafo, título o etiqueta de las hojas y escribí encima. Los cambios se
-    guardan solos en este navegador.
+    párrafo, título o celda de la tabla y escribí encima. Las líneas de servicio
+    se agregan con <b>+ Agregar línea</b> y se quitan con la <b>×</b> que aparece
+    al costado. Todo se guarda solo en este navegador.
+  </p>
+
+  <p class="warn" id="overflow-warn" hidden>
+    El contenido ya no entra en la hoja de cotización. Quitá alguna línea o
+    acortá los textos: lo que sobresale se recorta en el PDF.
   </p>
 </header>
 
@@ -250,7 +284,7 @@
 <section class="page" data-screen-label="Cotización">
 <div style="height:100%;display:flex;flex-direction:column;background:#fff;color:#111;font-family:var(--font-body,'Barlow',sans-serif)">
 <div style="display:flex;height:10px;flex:none"><div style="flex:1;background:#016753"></div><div style="flex:3;background:#AA8A0F"></div></div>
-<div style="flex:1;display:flex;flex-direction:column;padding:52px 76px 0;gap:24px">
+<div data-flow style="flex:1;display:flex;flex-direction:column;padding:52px 76px 0;gap:24px">
 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:32px">
 <div style="display:flex;flex-direction:column;gap:8px">
 <div data-t="cot.eyebrow" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#AA8A0F">Propuesta económica</div>
@@ -275,28 +309,16 @@
 </div>
 <p data-t="cot.intro" style="margin:0;font-size:15px;line-height:1.6;color:#333;max-width:66ch">A través de la presente cotización le hacemos llegar la información requerida de los servicios, esperando cubrir sus necesidades.</p>
 
-<div style="font-family:var(--font-condensed,'Barlow Condensed',sans-serif)">
-<div style="display:grid;grid-template-columns:1fr 92px 64px 150px 150px;background:#016753;color:#fff;font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase">
+<div class="lines" style="font-family:var(--font-condensed,'Barlow Condensed',sans-serif)">
+<div style="display:grid;grid-template-columns:var(--grid);background:#016753;color:#fff;font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase">
 <div data-t="cot.thServicio" style="padding:11px 16px;text-align:left">Servicio</div>
 <div data-t="cot.thTurno" style="padding:11px 12px;text-align:left">Turno</div>
 <div data-t="cot.thCantidad" style="padding:11px 12px;text-align:center">Cant.</div>
-<div data-t="cot.thQuincenal" style="padding:11px 12px;text-align:right">Costo quincenal</div>
+<div data-t="cot.thQuincenal" style="padding:11px 12px;text-align:right">Costo quincenal c/u</div>
 <div data-t="cot.thMensual" style="padding:11px 16px;text-align:right">Costo mensual</div>
 </div>
-<div style="display:grid;grid-template-columns:1fr 92px 64px 150px 150px;align-items:center;border-bottom:1px solid #EDEBE4">
-<div data-t="cot.l1Servicio" style="padding:14px 16px;font-size:17px;font-weight:600;color:#111;text-transform:uppercase;letter-spacing:.01em">Guardia de seguridad</div>
-<div data-t="cot.l1Turno" style="padding:14px 12px;font-size:17px;color:#333">12x12</div>
-<div data-t="cot.l1Cantidad" style="padding:14px 12px;font-size:17px;color:#333;text-align:center">2</div>
-<div data-v="quincenal1" style="padding:14px 12px;font-size:17px;color:#333;text-align:right"></div>
-<div data-v="mensual1" style="padding:14px 16px;font-size:17px;font-weight:600;color:#111;text-align:right"></div>
-</div>
-<div data-if="linea2" style="display:grid;grid-template-columns:1fr 92px 64px 150px 150px;align-items:center;border-bottom:1px solid #EDEBE4">
-<div data-t="cot.l2Servicio" style="padding:14px 16px;font-size:17px;font-weight:600;color:#111;text-transform:uppercase;letter-spacing:.01em">Limpieza general</div>
-<div data-t="cot.l2Turno" style="padding:14px 12px;font-size:17px;color:#333">8 hrs</div>
-<div data-t="cot.l2Cantidad" style="padding:14px 12px;font-size:17px;color:#333;text-align:center">1</div>
-<div data-v="quincenal2" style="padding:14px 12px;font-size:17px;color:#333;text-align:right"></div>
-<div data-v="mensual2" style="padding:14px 16px;font-size:17px;font-weight:600;color:#111;text-align:right"></div>
-</div>
+<div id="lines-host"></div>
+<button type="button" class="line-add" id="btn-add-line">+ Agregar línea</button>
 </div>
 
 <div style="display:flex;justify-content:flex-end">
@@ -348,6 +370,8 @@
   // overriding the embedded one.
   var LOGO_KEY = 'kleens-cotizacion-logo-v2';
 
+  var FORTNIGHTS_PER_MONTH = 2;
+
   function today() {
     var now = new Date();
     var pad = function (n) { return n < 10 ? '0' + n : String(n); };
@@ -355,25 +379,28 @@
   }
 
   // Deliberately empty of real business data: this file is published publicly.
-  // Actual clients and rates are typed in the toolbar and kept in localStorage,
-  // so they never reach the repository.
+  // Actual clients and rates are typed in and kept in localStorage, so they
+  // never reach the repository.
   var DEFAULTS = {
     cliente: 'Nombre del cliente',
     numero: '001',
     fecha: today(),
-    costoQuincenal: 0,
-    linea2: false,
-    costoQuincenal2: 0,
     ivaPct: 16,
     verNosotros: true,
     verFirma: true
   };
+
+  var DEFAULT_LINES = [
+    { servicio: 'Guardia de seguridad', turno: '12x12', cantidad: 1, unitario: 0 }
+  ];
 
   var inputs = Array.prototype.slice.call(document.querySelectorAll('[data-field]'));
   var bindings = Array.prototype.slice.call(document.querySelectorAll('[data-v]'));
   var conditionals = Array.prototype.slice.call(document.querySelectorAll('[data-if]'));
   var editables = Array.prototype.slice.call(document.querySelectorAll('[data-t]'));
   var pages = Array.prototype.slice.call(document.querySelectorAll('.page'));
+  var linesHost = document.getElementById('lines-host');
+  var overflowWarn = document.getElementById('overflow-warn');
 
   function read(key, fallback) {
     try {
@@ -394,6 +421,107 @@
     return '$ ' + Number(n || 0).toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
+    });
+  }
+
+  // Amounts are rendered with thousands separators and a currency mark, so the
+  // text that comes back out of a cell has to be stripped before it is a number.
+  function parseNumber(text) {
+    var n = parseFloat(String(text).replace(/[^0-9.]/g, ''));
+    return isFinite(n) && n > 0 ? n : 0;
+  }
+
+  /* ---- line items ------------------------------------------------------ */
+
+  var PLAINTEXT_ONLY = (function () {
+    var probe = document.createElement('div');
+    probe.setAttribute('contenteditable', 'plaintext-only');
+    return probe.contentEditable === 'plaintext-only';
+  })();
+
+  function makeEditable(el) {
+    el.setAttribute('contenteditable', PLAINTEXT_ONLY ? 'plaintext-only' : 'true');
+    el.setAttribute('spellcheck', 'false');
+
+    // Every page is a fixed-height sheet, so a stray line break pushes content
+    // out of the printable area. Enter commits the edit instead.
+    el.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        el.blur();
+      }
+    });
+
+    if (!PLAINTEXT_ONLY) {
+      el.addEventListener('paste', function (event) {
+        event.preventDefault();
+        var text = (event.clipboardData || window.clipboardData).getData('text');
+        document.execCommand('insertText', false, text.replace(/\s*\n\s*/g, ' '));
+      });
+    }
+  }
+
+  var CELL_STYLE = {
+    servicio: 'padding:14px 16px;font-size:17px;font-weight:600;color:#111;text-transform:uppercase;letter-spacing:.01em',
+    turno: 'padding:14px 12px;font-size:17px;color:#333',
+    cantidad: 'padding:14px 12px;font-size:17px;color:#333;text-align:center',
+    unitario: 'padding:14px 12px;font-size:17px;color:#333;text-align:right'
+  };
+
+  function buildRow(line) {
+    var row = document.createElement('div');
+    row.className = 'line';
+    row.setAttribute('style',
+      'display:grid;grid-template-columns:var(--grid);align-items:center;border-bottom:1px solid #EDEBE4');
+
+    ['servicio', 'turno', 'cantidad', 'unitario'].forEach(function (name) {
+      var cell = document.createElement('div');
+      cell.setAttribute('data-cell', name);
+      cell.setAttribute('style', CELL_STYLE[name]);
+      cell.textContent = name === 'unitario' ? money(line.unitario)
+        : name === 'cantidad' ? String(line.cantidad)
+        : line[name];
+      makeEditable(cell);
+      row.appendChild(cell);
+    });
+
+    var total = document.createElement('div');
+    total.setAttribute('data-out', 'mensual');
+    total.setAttribute('style',
+      'padding:14px 16px;font-size:17px;font-weight:600;color:#111;text-align:right');
+    row.appendChild(total);
+
+    var remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'line-del';
+    remove.title = 'Quitar esta línea';
+    remove.textContent = '×';
+    remove.addEventListener('click', function () {
+      // A quote with no rows has no meaning; keep at least one to edit.
+      if (linesHost.querySelectorAll('.line').length <= 1) return;
+      row.remove();
+      render();
+    });
+    row.appendChild(remove);
+
+    return row;
+  }
+
+  function renderLines(lines) {
+    linesHost.textContent = '';
+    (lines && lines.length ? lines : DEFAULT_LINES).forEach(function (line) {
+      linesHost.appendChild(buildRow(line));
+    });
+  }
+
+  function collectLines() {
+    return Array.prototype.slice.call(linesHost.querySelectorAll('.line')).map(function (row) {
+      return {
+        servicio: row.querySelector('[data-cell="servicio"]').textContent,
+        turno: row.querySelector('[data-cell="turno"]').textContent,
+        cantidad: parseNumber(row.querySelector('[data-cell="cantidad"]').textContent),
+        unitario: parseNumber(row.querySelector('[data-cell="unitario"]').textContent)
+      };
     });
   }
 
@@ -418,32 +546,43 @@
     return state;
   }
 
-  function compute(state) {
-    var monthly1 = state.costoQuincenal * 2;
-    var monthly2 = state.costoQuincenal2 * 2;
-    var subtotal = monthly1 + (state.linea2 ? monthly2 : 0);
+  /* ---- render ---------------------------------------------------------- */
+
+  // A flex item cannot shrink below its content (min-height defaults to auto),
+  // so a full table stretches the flow column instead of overflowing it — the
+  // column's own box grows with the rows and never reports the spill. What does
+  // move is the footer underneath it, pushed past the edge of the sheet.
+  function overflowsSheet() {
+    var page = document.querySelector('[data-flow]').closest('.page');
+    var footer = page.firstElementChild.lastElementChild;
+    return footer.getBoundingClientRect().bottom > page.getBoundingClientRect().bottom + 2;
+  }
+
+  function render() {
+    var state = readInputs();
+    var lines = collectLines();
+    var rows = Array.prototype.slice.call(linesHost.querySelectorAll('.line'));
+
+    var subtotal = 0;
+    rows.forEach(function (row, i) {
+      var monthly = lines[i].cantidad * lines[i].unitario * FORTNIGHTS_PER_MONTH;
+      subtotal += monthly;
+      row.querySelector('[data-out="mensual"]').textContent = money(monthly);
+    });
+
     var rate = Number(state.ivaPct) || 0;
     var tax = subtotal * rate / 100;
 
-    return {
+    var values = {
       cliente: state.cliente,
       numero: state.numero,
       fecha: state.fecha,
-      quincenal1: money(state.costoQuincenal),
-      mensual1: money(monthly1),
-      quincenal2: money(state.costoQuincenal2),
-      mensual2: money(monthly2),
       subtotal: money(subtotal),
       // Trailing zeros would read oddly in a label: 16% not 16.0%.
       ivaPct: String(Math.round(rate * 100) / 100) + '%',
       iva: money(tax),
       total: money(subtotal + tax)
     };
-  }
-
-  function render() {
-    var state = readInputs();
-    var values = compute(state);
 
     bindings.forEach(function (el) {
       el.textContent = values[el.dataset.v];
@@ -459,6 +598,13 @@
     var visible = pages.filter(function (page) { return !page.hidden; });
     if (visible.length) visible[visible.length - 1].classList.add('last-page');
 
+    // Rows are unbounded but the sheet is not; warn before the PDF clips.
+    // Measured per block rather than with scrollHeight, because the screen-only
+    // "add line" button is absolutely positioned below the table and would
+    // otherwise register as overflow on every render.
+    overflowWarn.hidden = !overflowsSheet();
+
+    state.lineas = lines;
     write(STORAGE_KEY, state);
   }
 
@@ -471,14 +617,6 @@
   editables.forEach(function (el) {
     baseline[el.dataset.t] = el.textContent;
   });
-
-  // Firefox has no plaintext-only; there we fall back to true plus a paste
-  // handler, otherwise pasted markup would land inside the document.
-  var PLAINTEXT_ONLY = (function () {
-    var probe = document.createElement('div');
-    probe.setAttribute('contenteditable', 'plaintext-only');
-    return probe.contentEditable === 'plaintext-only';
-  })();
 
   function applyTexts(stored) {
     editables.forEach(function (el) {
@@ -506,27 +644,46 @@
   }
 
   editables.forEach(function (el) {
-    el.setAttribute('contenteditable', PLAINTEXT_ONLY ? 'plaintext-only' : 'true');
-    el.setAttribute('spellcheck', 'false');
-
+    makeEditable(el);
     el.addEventListener('input', scheduleSave);
+  });
 
-    // Every page is a fixed-height sheet, so a stray line break pushes content
-    // out of the printable area. Enter commits the edit instead.
-    el.addEventListener('keydown', function (event) {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        el.blur();
-      }
-    });
+  // Line cells live inside the table, so their events are delegated: rows come
+  // and go, and re-binding per row would leak listeners.
+  linesHost.addEventListener('input', function (event) {
+    if (event.target.hasAttribute('data-cell')) render();
+  });
 
-    if (!PLAINTEXT_ONLY) {
-      el.addEventListener('paste', function (event) {
-        event.preventDefault();
-        var text = (event.clipboardData || window.clipboardData).getData('text');
-        document.execCommand('insertText', false, text.replace(/\s*\n\s*/g, ' '));
-      });
-    }
+  // Re-formatting happens on blur only. Doing it while typing would rewrite the
+  // node under the caret and send the cursor back to the start of the cell.
+  linesHost.addEventListener('focusout', function (event) {
+    var cell = event.target;
+    if (!cell.hasAttribute || !cell.hasAttribute('data-cell')) return;
+    var name = cell.getAttribute('data-cell');
+    if (name === 'unitario') cell.textContent = money(parseNumber(cell.textContent));
+    else if (name === 'cantidad') cell.textContent = String(parseNumber(cell.textContent));
+    render();
+  });
+
+  document.getElementById('btn-add-line').addEventListener('click', function () {
+    var previous = collectLines();
+    var last = previous[previous.length - 1];
+    linesHost.appendChild(buildRow({
+      servicio: 'Servicio',
+      // Carry the shift over: consecutive lines usually share it.
+      turno: last ? last.turno : '',
+      cantidad: 1,
+      unitario: 0
+    }));
+    render();
+    var added = linesHost.lastElementChild.querySelector('[data-cell="servicio"]');
+    added.focus();
+    // Select the placeholder so typing replaces it instead of appending.
+    var range = document.createRange();
+    range.selectNodeContents(added);
+    var selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
   });
 
   /* ---- logo ------------------------------------------------------------ */
@@ -603,16 +760,15 @@
   /* ---- wiring ---------------------------------------------------------- */
 
   document.getElementById('btn-reset').addEventListener('click', function () {
-    var edited = editables.some(function (el) {
-      return el.textContent !== baseline[el.dataset.t];
-    });
-    if (edited && !window.confirm(
-      'Esto descarta los valores y también todos los textos que hayas editado en el documento. ¿Continuar?'
+    if (!window.confirm(
+      'Esto descarta los valores, las líneas de servicio y todos los textos ' +
+      'que hayas editado en el documento. ¿Continuar?'
     )) return;
 
     writeInputs(DEFAULTS);
     applyTexts(null);
     saveTexts();
+    renderLines(DEFAULT_LINES);
     render();
   });
 
@@ -621,8 +777,31 @@
     el.addEventListener('change', render);
   });
 
-  writeInputs(Object.assign({}, DEFAULTS, read(STORAGE_KEY, null) || {}));
+  // Earlier versions stored two fixed rows as flat fields. Fold them into the
+  // line list so saved quotes survive the upgrade.
+  function migrate(saved) {
+    if (!saved || saved.lineas) return saved;
+    var lines = [];
+    if (saved.costoQuincenal != null) {
+      lines.push({
+        servicio: 'Guardia de seguridad', turno: '12x12',
+        cantidad: saved.cantidad || 1, unitario: saved.costoQuincenal || 0
+      });
+    }
+    if (saved.linea2) {
+      lines.push({
+        servicio: 'Limpieza general', turno: '8 hrs',
+        cantidad: saved.cantidad2 || 1, unitario: saved.costoQuincenal2 || 0
+      });
+    }
+    if (lines.length) saved.lineas = lines;
+    return saved;
+  }
+
+  var saved = migrate(read(STORAGE_KEY, null)) || {};
+  writeInputs(Object.assign({}, DEFAULTS, saved));
   applyTexts(read(TEXT_KEY, null));
+  renderLines(saved.lineas);
   render();
 })();
 </script>

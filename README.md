@@ -8,14 +8,15 @@ superior y el documento se actualiza en vivo.
 
 ## Uso
 
-1. Completá los campos de la barra superior (cliente, número, fecha, costos,
-   porcentaje de IVA).
+1. Completá los campos de la barra superior (cliente, número, fecha, IVA).
 2. **Hacé clic sobre cualquier texto de las hojas y escribí encima.** Títulos,
-   párrafos, nombres de servicio, condiciones y membrete son editables en el
+   párrafos, celdas de la tabla, condiciones y membrete son editables en el
    lugar; se resaltan al pasar el mouse.
-3. Usá los interruptores para mostrar u ocultar la página "Nosotros", la segunda
-   línea de servicio y el bloque de firma.
-4. Presioná **Descargar PDF** y elegí "Guardar como PDF" en el diálogo de
+3. Agregá servicios con **+ Agregar línea** debajo de la tabla y quitalos con la
+   **×** que aparece al costado de cada fila.
+4. Usá los interruptores para mostrar u ocultar la página "Nosotros" y el bloque
+   de firma.
+5. Presioná **Descargar PDF** y elegí "Guardar como PDF" en el diálogo de
    impresión.
 
 Todo queda guardado en el navegador (`localStorage`), así que al volver a abrir
@@ -26,19 +27,26 @@ el archivo sigue ahí. **Restablecer** vuelve a los valores y textos iniciales.
 | Mecanismo               | Alcance                                                                 |
 | ----------------------- | ----------------------------------------------------------------------- |
 | Barra superior          | Lo que alimenta cálculos o se repite en varias páginas                  |
-| Clic sobre el documento | Los ~50 textos literales: títulos, párrafos, etiquetas, tabla, membrete |
+| Clic sobre el documento | Los ~50 textos literales y las celdas de cada línea de servicio         |
 
 ## Cómo se calcula
 
-| Concepto      | Fórmula                                       |
-| ------------- | --------------------------------------------- |
-| Costo mensual | costo quincenal × 2                           |
-| Subtotal      | mensual línea 1 + mensual línea 2 (si aplica)  |
-| IVA           | subtotal × porcentaje configurable (16 % por defecto) |
-| Total mensual | subtotal + IVA                                |
+| Concepto              | Fórmula                                               |
+| --------------------- | ----------------------------------------------------- |
+| Costo mensual (línea) | cantidad × costo quincenal c/u × 2 quincenas          |
+| Subtotal              | suma del costo mensual de todas las líneas            |
+| IVA                   | subtotal × porcentaje configurable (16 % por defecto)  |
+| Total mensual         | subtotal + IVA                                        |
 
-La columna **Cant.** es descriptiva: no multiplica el precio. El costo quincenal
-se captura como total de la línea, igual que en el diseño original.
+La columna **Costo quincenal** es **por unidad**, no el total de la línea: la
+cantidad la multiplica.
+
+## Cuánto entra en la hoja
+
+La hoja es de alto fijo (Carta), así que las líneas no son infinitas en la
+práctica: entran **3 con el bloque de firma visible y 5 sin él**. Al pasarse
+aparece un aviso en la barra superior, porque lo que sobresale se recorta en el
+PDF en vez de saltar a otra página.
 
 ## Notas técnicas
 
@@ -61,6 +69,12 @@ se captura como total de la línea, igual que en el diseño original.
   texto nuevo llega a quien nunca editó esa cadena en particular.
 - **El porcentaje de IVA es un campo, no una etiqueta.** Antes decía "IVA 16 %"
   con el 0,16 fijo en el código: editar el rótulo no habría cambiado la cuenta.
+- **Las celdas numéricas se reformatean al salir del campo, nunca al tipear.**
+  Reescribir el nodo bajo el cursor mandaría el cursor al principio de la celda.
+- **El aviso de desborde mide el pie contra el borde de la hoja**, no
+  `scrollHeight`. Un ítem flex no se encoge por debajo de su contenido
+  (`min-height: auto`), así que la columna crece con las filas y nunca reporta
+  desborde; lo que sí se desplaza es el pie que va debajo.
 - El archivo no contiene datos reales de clientes ni tarifas: los valores por
   defecto son genéricos y lo que se escribe vive sólo en el navegador.
 
