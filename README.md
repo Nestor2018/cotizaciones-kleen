@@ -8,23 +8,37 @@ superior y el documento se actualiza en vivo.
 
 ## Uso
 
-1. Completá los campos de la barra superior (cliente, número, fecha, costos).
-2. Usá los interruptores para mostrar u ocultar la página "Nosotros", la segunda
+1. Completá los campos de la barra superior (cliente, número, fecha, costos,
+   porcentaje de IVA).
+2. **Hacé clic sobre cualquier texto de las hojas y escribí encima.** Títulos,
+   párrafos, nombres de servicio, condiciones y membrete son editables en el
+   lugar; se resaltan al pasar el mouse.
+3. Usá los interruptores para mostrar u ocultar la página "Nosotros", la segunda
    línea de servicio y el bloque de firma.
-3. Presioná **Descargar PDF** y elegí "Guardar como PDF" en el diálogo de
+4. Presioná **Descargar PDF** y elegí "Guardar como PDF" en el diálogo de
    impresión.
 
-Los valores quedan guardados en el navegador (`localStorage`), así que al volver
-a abrir el archivo siguen ahí. **Restablecer** vuelve a los valores iniciales.
+Todo queda guardado en el navegador (`localStorage`), así que al volver a abrir
+el archivo sigue ahí. **Restablecer** vuelve a los valores y textos iniciales.
+
+## Qué se edita dónde
+
+| Mecanismo               | Alcance                                                                 |
+| ----------------------- | ----------------------------------------------------------------------- |
+| Barra superior          | Lo que alimenta cálculos o se repite en varias páginas                  |
+| Clic sobre el documento | Los ~50 textos literales: títulos, párrafos, etiquetas, tabla, membrete |
 
 ## Cómo se calcula
 
-| Concepto      | Fórmula                                      |
-| ------------- | -------------------------------------------- |
-| Costo mensual | costo quincenal × 2                          |
-| Subtotal      | mensual línea 1 + mensual línea 2 (si aplica) |
-| IVA           | subtotal × 16 %                              |
-| Total mensual | subtotal + IVA                               |
+| Concepto      | Fórmula                                       |
+| ------------- | --------------------------------------------- |
+| Costo mensual | costo quincenal × 2                           |
+| Subtotal      | mensual línea 1 + mensual línea 2 (si aplica)  |
+| IVA           | subtotal × porcentaje configurable (16 % por defecto) |
+| Total mensual | subtotal + IVA                                |
+
+La columna **Cant.** es descriptiva: no multiplica el precio. El costo quincenal
+se captura como total de la línea, igual que en el diseño original.
 
 ## Notas técnicas
 
@@ -37,6 +51,16 @@ a abrir el archivo siguen ahí. **Restablecer** vuelve a los valores iniciales.
 - **El logo va embebido como data-URI**, recortado de sus márgenes transparentes
   (el original tenía 48 % del ancho y 26 % del alto en vacío) y cuantizado a 64
   colores: 32 KB en lugar de 182 KB. Por eso el archivo no depende de `assets/`.
+- **Los textos editables usan `contenteditable="plaintext-only"`** para que
+  pegar desde Word no inyecte marcado; en Firefox, que no lo soporta, hay un
+  manejador de `paste` equivalente. Enter confirma la edición en vez de insertar
+  un salto: la hoja mide 11 in exactas y un salto empujaría contenido fuera del
+  área imprimible.
+- **De los textos sólo se guardan las diferencias** contra el marcado, no las
+  cadenas completas. Si más adelante se reformula una frase del template, el
+  texto nuevo llega a quien nunca editó esa cadena en particular.
+- **El porcentaje de IVA es un campo, no una etiqueta.** Antes decía "IVA 16 %"
+  con el 0,16 fijo en el código: editar el rótulo no habría cambiado la cuenta.
 - El archivo no contiene datos reales de clientes ni tarifas: los valores por
   defecto son genéricos y lo que se escribe vive sólo en el navegador.
 

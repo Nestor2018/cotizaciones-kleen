@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cotización Kleen's</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23016753'/%3E%3Ctext x='32' y='46' text-anchor='middle' font-family='Montserrat,Helvetica,Arial,sans-serif' font-weight='900' font-size='40' fill='%23AA8A0F'%3EK%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet">
@@ -50,6 +51,7 @@
   .w-numero{width:74px}
   .w-fecha{width:110px}
   .w-money{width:96px}
+  .w-pct{width:62px}
 
   .switch{position:relative;display:inline-block;width:38px;height:22px;flex:none}
   .switch input{position:absolute;opacity:0;width:0;height:0}
@@ -75,6 +77,12 @@
   .btn.btn-ghost:hover{background:#e8e8e3}
   .btn input[type=file]{display:none}
 
+  .hint{
+    width:100%;margin:-2px 0 0;font-size:12px;color:#6b6b66;
+    font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  }
+  .hint b{color:var(--brand);font-weight:600}
+
   /* ---------- Pages ---------- */
   #doc{display:flex;flex-direction:column;align-items:center;gap:24px;padding:28px 16px 56px}
   .page{
@@ -88,6 +96,21 @@
      global border-box reset so `height` still means the artwork's height. */
   [data-logo]{box-sizing:content-box}
 
+  /* ---------- In-place editable text ---------- */
+  [data-t]{
+    border-radius:2px;
+    transition:background .12s,box-shadow .12s;
+    cursor:text;
+  }
+  [data-t]:hover{background:rgba(170,138,15,.18)}
+  [data-t]:focus{
+    outline:none;
+    background:rgba(170,138,15,.14);
+    box-shadow:0 0 0 2px rgba(1,103,83,.55);
+  }
+  /* Keep an emptied field clickable instead of collapsing to zero width. */
+  [data-t]:empty::before{content:"·····";opacity:.3}
+
   @page{size:letter;margin:0}
   @media print{
     body{background:#fff}
@@ -95,6 +118,9 @@
     #doc{display:block;padding:0;gap:0}
     .page{box-shadow:none;margin:0;break-after:page;page-break-after:always}
     .page.last-page{break-after:auto;page-break-after:auto}
+    /* No trace of the editing affordances in the PDF. */
+    [data-t]{background:none !important;box-shadow:none !important;outline:none !important}
+    [data-t]:empty::before{content:"" !important}
   }
 </style>
 </head>
@@ -125,6 +151,10 @@
     <span class="lbl">costoQuincenal2</span>
     <input id="f-costoQuincenal2" class="w-money" type="number" min="0" step="100" data-field="costoQuincenal2">
   </div>
+  <div class="field">
+    <span class="lbl">IVA %</span>
+    <input id="f-ivaPct" class="w-pct" type="number" min="0" max="100" step="0.5" data-field="ivaPct">
+  </div>
   <div class="field is-switch">
     <span class="lbl">verNosotros</span>
     <label class="switch"><input type="checkbox" data-field="verNosotros"><span class="slider"></span></label>
@@ -135,13 +165,19 @@
   </div>
 
   <div class="toolbar-actions">
-    <label class="btn btn-ghost" title="Embeds a logo image into this document">
+    <label class="btn btn-ghost" title="Reemplaza el logo del documento">
       Logo…
       <input type="file" id="f-logo" accept="image/png,image/jpeg,image/svg+xml,image/webp">
     </label>
     <button class="btn btn-ghost" id="btn-reset" type="button">Restablecer</button>
     <button class="btn" id="btn-pdf" type="button">Descargar PDF</button>
   </div>
+
+  <p class="hint">
+    <b>Todo el texto del documento es editable:</b> hacé clic sobre cualquier
+    párrafo, título o etiqueta de las hojas y escribí encima. Los cambios se
+    guardan solos en este navegador.
+  </p>
 </header>
 
 <main id="doc">
@@ -153,25 +189,25 @@
 <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 84px;text-align:center;gap:34px">
 <img data-logo alt="Kleen's" style="height:300px;background:#fff;padding:26px 38px;border-radius:4px" />
 <div style="height:3px;width:300px;background:linear-gradient(90deg,#AA8A0F 0%,#E5D293 55%,#FFFFFF 100%)"></div>
-<div style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:900;text-transform:uppercase;letter-spacing:-.01em;font-size:52px;line-height:1">Cotización</div>
+<div data-t="portada.titulo" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:900;text-transform:uppercase;letter-spacing:-.01em;font-size:52px;line-height:1">Cotización</div>
 <div style="display:flex;gap:44px;font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:#E5D293">
-<div>No. <span data-v="numero"></span></div>
+<div><span data-t="portada.numeroPrefijo">No.</span> <span data-v="numero"></span></div>
 <div data-v="fecha"></div>
 </div>
-<p style="margin:0;max-width:44ch;font-size:17px;line-height:1.6;color:rgba(255,255,255,.88)">Servicios de seguridad privada y limpieza especializada</p>
+<p data-t="portada.subtitulo" style="margin:0;max-width:44ch;font-size:17px;line-height:1.6;color:rgba(255,255,255,.88)">Servicios de seguridad privada y limpieza especializada</p>
 </div>
 <div style="flex:none;padding:0 84px 64px;display:flex;flex-direction:column;gap:18px">
 <div style="height:1px;background:rgba(255,255,255,.24)"></div>
 <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:32px">
 <div style="display:flex;flex-direction:column;gap:6px;text-align:left">
-<div style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#E5D293">Presentada a</div>
+<div data-t="portada.presentadaA" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#E5D293">Presentada a</div>
 <div data-v="cliente" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:800;font-size:22px;text-transform:uppercase;letter-spacing:.01em"></div>
-<div style="font-size:14px;color:rgba(255,255,255,.78)">Atención: Administración</div>
+<div data-t="portada.atencion" style="font-size:14px;color:rgba(255,255,255,.78)">Atención: Administración</div>
 </div>
 <div style="text-align:right;font-size:12.5px;line-height:1.7;color:rgba(255,255,255,.78)">
-<div>PERFEC KLEEN, S.A. DE C.V.</div>
-<div>RFC PKL221208MR0</div>
-<div>272 127 6806 · perfectkleen@outlook.com</div>
+<div data-t="portada.razonSocial">PERFEC KLEEN, S.A. DE C.V.</div>
+<div data-t="portada.rfc">RFC PKL221208MR0</div>
+<div data-t="portada.contacto">272 127 6806 · perfectkleen@outlook.com</div>
 </div>
 </div>
 </div>
@@ -184,28 +220,28 @@
 <div style="display:flex;height:10px;flex:none"><div style="flex:1;background:#016753"></div><div style="flex:3;background:#AA8A0F"></div></div>
 <div style="flex:1;display:flex;flex-direction:column;padding:60px 76px 0;gap:28px">
 <div style="display:flex;flex-direction:column;gap:8px">
-<div style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#AA8A0F">Nosotros</div>
-<h1 style="margin:0;font-family:var(--font-display,'Montserrat',sans-serif);font-weight:900;text-transform:uppercase;letter-spacing:-.01em;font-size:38px;line-height:1.05;color:#111">Quiénes somos</h1>
+<div data-t="nosotros.eyebrow" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#AA8A0F">Nosotros</div>
+<h1 data-t="nosotros.titulo" style="margin:0;font-family:var(--font-display,'Montserrat',sans-serif);font-weight:900;text-transform:uppercase;letter-spacing:-.01em;font-size:38px;line-height:1.05;color:#111">Quiénes somos</h1>
 <div style="height:3px;width:72px;background:#AA8A0F"></div>
 </div>
-<p style="margin:0;font-size:16.5px;line-height:1.62;color:#333;max-width:62ch">Empresa mexicana especializada en ofrecer servicios de seguridad privada profesional con experiencia comprobada en el ramo. Contamos con elementos preparados y capacitados constantemente, esto nos ha permitido ofrecer nuestros servicios a condominios y plazas comerciales en diferentes lugares del país.</p>
+<p data-t="nosotros.intro" style="margin:0;font-size:16.5px;line-height:1.62;color:#333;max-width:62ch">Empresa mexicana especializada en ofrecer servicios de seguridad privada profesional con experiencia comprobada en el ramo. Contamos con elementos preparados y capacitados constantemente, esto nos ha permitido ofrecer nuestros servicios a condominios y plazas comerciales en diferentes lugares del país.</p>
 <div style="display:flex;flex-direction:column;gap:16px">
 <div style="border:1px solid #EDEBE4;border-top:3px solid #016753;background:#fff;padding:22px 24px;display:flex;flex-direction:column;gap:8px">
-<div style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:800;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#016753">Misión</div>
-<p style="margin:0;font-size:15px;line-height:1.6;color:#333">Por medio de un servicio profesional y adaptativo a las necesidades de nuestros clientes, ofrecer un seguimiento y servicio de primera de manera constante y eficaz. Así mismo, por medio de un equipo profesional y experto en su área, ofrecer servicios competitivos que logren los objetivos y demandas de nuestros clientes.</p>
+<div data-t="nosotros.misionTitulo" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:800;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#016753">Misión</div>
+<p data-t="nosotros.misionTexto" style="margin:0;font-size:15px;line-height:1.6;color:#333">Por medio de un servicio profesional y adaptativo a las necesidades de nuestros clientes, ofrecer un seguimiento y servicio de primera de manera constante y eficaz. Así mismo, por medio de un equipo profesional y experto en su área, ofrecer servicios competitivos que logren los objetivos y demandas de nuestros clientes.</p>
 </div>
 <div style="border:1px solid #EDEBE4;border-top:3px solid #AA8A0F;background:#F4F1E3;padding:22px 24px;display:flex;flex-direction:column;gap:8px">
-<div style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:800;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#8A700C">Visión</div>
-<p style="margin:0;font-size:15px;line-height:1.6;color:#333">Ser un referente de excelencia y de servicio profesional en el área de seguridad privada en el sureste del país, y ser una empresa líder en vigilancia y servicios referentes a cuidado y protección de bienes o inmuebles.</p>
+<div data-t="nosotros.visionTitulo" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:800;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#8A700C">Visión</div>
+<p data-t="nosotros.visionTexto" style="margin:0;font-size:15px;line-height:1.6;color:#333">Ser un referente de excelencia y de servicio profesional en el área de seguridad privada en el sureste del país, y ser una empresa líder en vigilancia y servicios referentes a cuidado y protección de bienes o inmuebles.</p>
 </div>
 <div style="border:1px solid #EDEBE4;border-top:3px solid #016753;background:#fff;padding:22px 24px;display:flex;flex-direction:column;gap:8px">
-<div style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:800;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#016753">Filosofía</div>
-<p style="margin:0;font-size:15px;line-height:1.6;color:#333">Creemos que la búsqueda de la excelencia y la calidad total son aptitudes indispensables, encaminadas a la satisfacción absoluta del cliente. Para ello contamos con áreas de capacitación específica y supervisión permanente.</p>
+<div data-t="nosotros.filosofiaTitulo" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:800;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#016753">Filosofía</div>
+<p data-t="nosotros.filosofiaTexto" style="margin:0;font-size:15px;line-height:1.6;color:#333">Creemos que la búsqueda de la excelencia y la calidad total son aptitudes indispensables, encaminadas a la satisfacción absoluta del cliente. Para ello contamos con áreas de capacitación específica y supervisión permanente.</p>
 </div>
 </div>
 </div>
 <div style="flex:none;margin:0 76px 42px;border-top:1px solid #EDEBE4;padding-top:12px;display:flex;justify-content:space-between;font-family:var(--font-display,'Montserrat',sans-serif);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8A8A8A">
-<span>Kleen's · Cotización No. <span data-v="numero"></span></span><span>Página 2</span>
+<span><span data-t="nosotros.pieMarca">Kleen's · Cotización No.</span> <span data-v="numero"></span></span><span data-t="nosotros.pieDerecha">Página 2</span>
 </div>
 </div>
 </section>
@@ -217,47 +253,47 @@
 <div style="flex:1;display:flex;flex-direction:column;padding:52px 76px 0;gap:24px">
 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:32px">
 <div style="display:flex;flex-direction:column;gap:8px">
-<div style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#AA8A0F">Propuesta económica</div>
-<h1 style="margin:0;font-family:var(--font-display,'Montserrat',sans-serif);font-weight:900;text-transform:uppercase;letter-spacing:-.01em;font-size:34px;line-height:1.05;color:#111">Cotización No. <span data-v="numero"></span></h1>
+<div data-t="cot.eyebrow" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#AA8A0F">Propuesta económica</div>
+<h1 style="margin:0;font-family:var(--font-display,'Montserrat',sans-serif);font-weight:900;text-transform:uppercase;letter-spacing:-.01em;font-size:34px;line-height:1.05;color:#111"><span data-t="cot.tituloPrefijo">Cotización No.</span> <span data-v="numero"></span></h1>
 <div style="height:3px;width:72px;background:#AA8A0F"></div>
 </div>
 <img data-logo alt="Kleen's" style="height:104px" />
 </div>
 <div style="display:flex;border:1px solid #EDEBE4">
 <div style="flex:1;padding:14px 18px;display:flex;flex-direction:column;gap:3px;border-right:1px solid #EDEBE4">
-<div style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8A8A8A">Cliente</div>
+<div data-t="cot.labelCliente" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8A8A8A">Cliente</div>
 <div data-v="cliente" style="font-size:15px;font-weight:600;color:#111"></div>
 </div>
 <div style="width:170px;padding:14px 18px;display:flex;flex-direction:column;gap:3px;border-right:1px solid #EDEBE4">
-<div style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8A8A8A">Fecha</div>
+<div data-t="cot.labelFecha" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8A8A8A">Fecha</div>
 <div data-v="fecha" style="font-size:15px;font-weight:600;color:#111"></div>
 </div>
 <div style="width:170px;padding:14px 18px;display:flex;flex-direction:column;gap:3px">
-<div style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8A8A8A">Vigencia</div>
-<div style="font-size:15px;font-weight:600;color:#111">15 días naturales</div>
+<div data-t="cot.labelVigencia" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8A8A8A">Vigencia</div>
+<div data-t="cot.vigencia" style="font-size:15px;font-weight:600;color:#111">15 días naturales</div>
 </div>
 </div>
-<p style="margin:0;font-size:15px;line-height:1.6;color:#333;max-width:66ch">A través de la presente cotización le hacemos llegar la información requerida de los servicios, esperando cubrir sus necesidades.</p>
+<p data-t="cot.intro" style="margin:0;font-size:15px;line-height:1.6;color:#333;max-width:66ch">A través de la presente cotización le hacemos llegar la información requerida de los servicios, esperando cubrir sus necesidades.</p>
 
 <div style="font-family:var(--font-condensed,'Barlow Condensed',sans-serif)">
 <div style="display:grid;grid-template-columns:1fr 92px 64px 150px 150px;background:#016753;color:#fff;font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase">
-<div style="padding:11px 16px;text-align:left">Servicio</div>
-<div style="padding:11px 12px;text-align:left">Turno</div>
-<div style="padding:11px 12px;text-align:center">Cant.</div>
-<div style="padding:11px 12px;text-align:right">Costo quincenal</div>
-<div style="padding:11px 16px;text-align:right">Costo mensual</div>
+<div data-t="cot.thServicio" style="padding:11px 16px;text-align:left">Servicio</div>
+<div data-t="cot.thTurno" style="padding:11px 12px;text-align:left">Turno</div>
+<div data-t="cot.thCantidad" style="padding:11px 12px;text-align:center">Cant.</div>
+<div data-t="cot.thQuincenal" style="padding:11px 12px;text-align:right">Costo quincenal</div>
+<div data-t="cot.thMensual" style="padding:11px 16px;text-align:right">Costo mensual</div>
 </div>
 <div style="display:grid;grid-template-columns:1fr 92px 64px 150px 150px;align-items:center;border-bottom:1px solid #EDEBE4">
-<div style="padding:14px 16px;font-size:17px;font-weight:600;color:#111;text-transform:uppercase;letter-spacing:.01em">Guardia de seguridad</div>
-<div style="padding:14px 12px;font-size:17px;color:#333">12x12</div>
-<div style="padding:14px 12px;font-size:17px;color:#333;text-align:center">2</div>
+<div data-t="cot.l1Servicio" style="padding:14px 16px;font-size:17px;font-weight:600;color:#111;text-transform:uppercase;letter-spacing:.01em">Guardia de seguridad</div>
+<div data-t="cot.l1Turno" style="padding:14px 12px;font-size:17px;color:#333">12x12</div>
+<div data-t="cot.l1Cantidad" style="padding:14px 12px;font-size:17px;color:#333;text-align:center">2</div>
 <div data-v="quincenal1" style="padding:14px 12px;font-size:17px;color:#333;text-align:right"></div>
 <div data-v="mensual1" style="padding:14px 16px;font-size:17px;font-weight:600;color:#111;text-align:right"></div>
 </div>
 <div data-if="linea2" style="display:grid;grid-template-columns:1fr 92px 64px 150px 150px;align-items:center;border-bottom:1px solid #EDEBE4">
-<div style="padding:14px 16px;font-size:17px;font-weight:600;color:#111;text-transform:uppercase;letter-spacing:.01em">Limpieza general</div>
-<div style="padding:14px 12px;font-size:17px;color:#333">8 hrs</div>
-<div style="padding:14px 12px;font-size:17px;color:#333;text-align:center">1</div>
+<div data-t="cot.l2Servicio" style="padding:14px 16px;font-size:17px;font-weight:600;color:#111;text-transform:uppercase;letter-spacing:.01em">Limpieza general</div>
+<div data-t="cot.l2Turno" style="padding:14px 12px;font-size:17px;color:#333">8 hrs</div>
+<div data-t="cot.l2Cantidad" style="padding:14px 12px;font-size:17px;color:#333;text-align:center">1</div>
 <div data-v="quincenal2" style="padding:14px 12px;font-size:17px;color:#333;text-align:right"></div>
 <div data-v="mensual2" style="padding:14px 16px;font-size:17px;font-weight:600;color:#111;text-align:right"></div>
 </div>
@@ -265,37 +301,37 @@
 
 <div style="display:flex;justify-content:flex-end">
 <div style="width:330px;display:flex;flex-direction:column;font-family:var(--font-condensed,'Barlow Condensed',sans-serif)">
-<div style="display:flex;justify-content:space-between;padding:9px 16px;border-bottom:1px solid #EDEBE4"><span style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#5C5C5C">Subtotal</span><span data-v="subtotal" style="font-size:17px;color:#333"></span></div>
-<div style="display:flex;justify-content:space-between;padding:9px 16px;border-bottom:1px solid #EDEBE4"><span style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#5C5C5C">IVA 16%</span><span data-v="iva" style="font-size:17px;color:#333"></span></div>
-<div style="display:flex;justify-content:space-between;align-items:baseline;padding:13px 16px;background:#016753;color:#fff"><span style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:800;font-size:12px;letter-spacing:.13em;text-transform:uppercase">Total mensual</span><span data-v="total" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:900;font-size:24px"></span></div>
+<div style="display:flex;justify-content:space-between;padding:9px 16px;border-bottom:1px solid #EDEBE4"><span data-t="cot.labelSubtotal" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#5C5C5C">Subtotal</span><span data-v="subtotal" style="font-size:17px;color:#333"></span></div>
+<div style="display:flex;justify-content:space-between;padding:9px 16px;border-bottom:1px solid #EDEBE4"><span style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:700;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#5C5C5C"><span data-t="cot.labelIva">IVA</span> <span data-v="ivaPct"></span></span><span data-v="iva" style="font-size:17px;color:#333"></span></div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding:13px 16px;background:#016753;color:#fff"><span data-t="cot.labelTotal" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:800;font-size:12px;letter-spacing:.13em;text-transform:uppercase">Total mensual</span><span data-v="total" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:900;font-size:24px"></span></div>
 </div>
 </div>
 
 <div style="display:flex;gap:28px;align-items:flex-start">
 <div style="flex:1;display:flex;flex-direction:column;gap:10px">
-<div style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:800;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#016753">Los servicios incluyen</div>
+<div data-t="cot.incluyeTitulo" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:800;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#016753">Los servicios incluyen</div>
 <div style="display:flex;flex-direction:column;gap:7px;font-size:14.5px;line-height:1.5;color:#333">
-<div style="display:flex;gap:9px"><span style="color:#AA8A0F;font-weight:700">—</span><span>Servicio de vigilancia de lunes a domingo con turnos de 12 hrs.</span></div>
-<div style="display:flex;gap:9px"><span style="color:#AA8A0F;font-weight:700">—</span><span>Guardias uniformados con logo de la empresa para mayor identificación.</span></div>
-<div style="display:flex;gap:9px"><span style="color:#AA8A0F;font-weight:700">—</span><span>Herramientas de seguridad, capacitación y supervisión.</span></div>
-<div style="display:flex;gap:9px"><span style="color:#AA8A0F;font-weight:700">—</span><span>Días festivos incluidos en el costo mensual.</span></div>
+<div style="display:flex;gap:9px"><span style="color:#AA8A0F;font-weight:700">—</span><span data-t="cot.incluye1">Servicio de vigilancia de lunes a domingo con turnos de 12 hrs.</span></div>
+<div style="display:flex;gap:9px"><span style="color:#AA8A0F;font-weight:700">—</span><span data-t="cot.incluye2">Guardias uniformados con logo de la empresa para mayor identificación.</span></div>
+<div style="display:flex;gap:9px"><span style="color:#AA8A0F;font-weight:700">—</span><span data-t="cot.incluye3">Herramientas de seguridad, capacitación y supervisión.</span></div>
+<div style="display:flex;gap:9px"><span style="color:#AA8A0F;font-weight:700">—</span><span data-t="cot.incluye4">Días festivos incluidos en el costo mensual.</span></div>
 </div>
 </div>
 <div style="width:270px;background:#F4F1E3;border-left:3px solid #AA8A0F;padding:16px 18px;display:flex;flex-direction:column;gap:8px">
-<div style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:800;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8A700C">Condiciones</div>
-<p style="margin:0;font-size:13.5px;line-height:1.55;color:#333">Para la contratación del servicio se requiere la firma del contrato y se contará con un plazo de pago no mayor a 30 días. Aplican restricciones.</p>
+<div data-t="cot.condicionesTitulo" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:800;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8A700C">Condiciones</div>
+<p data-t="cot.condicionesTexto" style="margin:0;font-size:13.5px;line-height:1.55;color:#333">Para la contratación del servicio se requiere la firma del contrato y se contará con un plazo de pago no mayor a 30 días. Aplican restricciones.</p>
 </div>
 </div>
 
 <div data-if="verFirma" style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
-<p style="margin:0 0 16px;font-size:14.5px;color:#333">Quedamos a sus órdenes para cualquier duda o aclaración.</p>
+<p data-t="cot.cierre" style="margin:0 0 16px;font-size:14.5px;color:#333">Quedamos a sus órdenes para cualquier duda o aclaración.</p>
 <div style="width:250px;height:1px;background:#111"></div>
-<div style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:800;font-size:14px;letter-spacing:.02em;text-transform:uppercase;color:#111">Brenda Sánchez García</div>
-<div style="font-size:13px;color:#5C5C5C">PERFEC KLEEN, S.A. DE C.V.</div>
+<div data-t="cot.firmante" style="font-family:var(--font-display,'Montserrat',sans-serif);font-weight:800;font-size:14px;letter-spacing:.02em;text-transform:uppercase;color:#111">Nombre de quien firma</div>
+<div data-t="cot.firmanteCargo" style="font-size:13px;color:#5C5C5C">PERFEC KLEEN, S.A. DE C.V.</div>
 </div>
 </div>
 <div style="flex:none;margin:0 76px 42px;border-top:1px solid #EDEBE4;padding-top:12px;display:flex;justify-content:space-between;font-family:var(--font-display,'Montserrat',sans-serif);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8A8A8A">
-<span>272 127 6806 · perfectkleen@outlook.com</span><span>RFC PKL221208MR0</span>
+<span data-t="cot.pieIzquierda">272 127 6806 · perfectkleen@outlook.com</span><span data-t="cot.pieDerecha">RFC PKL221208MR0</span>
 </div>
 </div>
 </section>
@@ -307,6 +343,7 @@
   'use strict';
 
   var STORAGE_KEY = 'kleens-cotizacion-state';
+  var TEXT_KEY = 'kleens-cotizacion-texts';
   // Versioned so a logo stored before the artwork was trimmed does not keep
   // overriding the embedded one.
   var LOGO_KEY = 'kleens-cotizacion-logo-v2';
@@ -327,6 +364,7 @@
     costoQuincenal: 0,
     linea2: false,
     costoQuincenal2: 0,
+    ivaPct: 16,
     verNosotros: true,
     verFirma: true
   };
@@ -334,7 +372,23 @@
   var inputs = Array.prototype.slice.call(document.querySelectorAll('[data-field]'));
   var bindings = Array.prototype.slice.call(document.querySelectorAll('[data-v]'));
   var conditionals = Array.prototype.slice.call(document.querySelectorAll('[data-if]'));
+  var editables = Array.prototype.slice.call(document.querySelectorAll('[data-t]'));
   var pages = Array.prototype.slice.call(document.querySelectorAll('.page'));
+
+  function read(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (err) {
+      return fallback; // absent, corrupt, or private browsing
+    }
+  }
+
+  function write(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (err) { /* private browsing — keep working without persistence */ }
+  }
 
   function money(n) {
     return '$ ' + Number(n || 0).toLocaleString('en-US', {
@@ -343,7 +397,7 @@
     });
   }
 
-  /* ---- state <-> toolbar ---------------------------------------------- */
+  /* ---- toolbar fields -------------------------------------------------- */
 
   function writeInputs(state) {
     inputs.forEach(function (el) {
@@ -364,13 +418,12 @@
     return state;
   }
 
-  /* ---- derived values -------------------------------------------------- */
-
   function compute(state) {
     var monthly1 = state.costoQuincenal * 2;
     var monthly2 = state.costoQuincenal2 * 2;
     var subtotal = monthly1 + (state.linea2 ? monthly2 : 0);
-    var tax = subtotal * 0.16;
+    var rate = Number(state.ivaPct) || 0;
+    var tax = subtotal * rate / 100;
 
     return {
       cliente: state.cliente,
@@ -381,12 +434,12 @@
       quincenal2: money(state.costoQuincenal2),
       mensual2: money(monthly2),
       subtotal: money(subtotal),
+      // Trailing zeros would read oddly in a label: 16% not 16.0%.
+      ivaPct: String(Math.round(rate * 100) / 100) + '%',
       iva: money(tax),
       total: money(subtotal + tax)
     };
   }
-
-  /* ---- render ---------------------------------------------------------- */
 
   function render() {
     var state = readInputs();
@@ -406,10 +459,75 @@
     var visible = pages.filter(function (page) { return !page.hidden; });
     if (visible.length) visible[visible.length - 1].classList.add('last-page');
 
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (err) { /* private browsing — keep working without persistence */ }
+    write(STORAGE_KEY, state);
   }
+
+  /* ---- in-place editable document text ---------------------------------- */
+
+  // The markup itself is the source of truth for the wording, so only the
+  // edits that differ from it are stored. Rewording the template later then
+  // reaches anyone who never touched that particular string.
+  var baseline = {};
+  editables.forEach(function (el) {
+    baseline[el.dataset.t] = el.textContent;
+  });
+
+  // Firefox has no plaintext-only; there we fall back to true plus a paste
+  // handler, otherwise pasted markup would land inside the document.
+  var PLAINTEXT_ONLY = (function () {
+    var probe = document.createElement('div');
+    probe.setAttribute('contenteditable', 'plaintext-only');
+    return probe.contentEditable === 'plaintext-only';
+  })();
+
+  function applyTexts(stored) {
+    editables.forEach(function (el) {
+      var key = el.dataset.t;
+      var value = stored && Object.prototype.hasOwnProperty.call(stored, key)
+        ? stored[key]
+        : baseline[key];
+      if (el.textContent !== value) el.textContent = value;
+    });
+  }
+
+  function saveTexts() {
+    var diff = {};
+    editables.forEach(function (el) {
+      var key = el.dataset.t;
+      if (el.textContent !== baseline[key]) diff[key] = el.textContent;
+    });
+    write(TEXT_KEY, diff);
+  }
+
+  var saveTimer = null;
+  function scheduleSave() {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveTexts, 300);
+  }
+
+  editables.forEach(function (el) {
+    el.setAttribute('contenteditable', PLAINTEXT_ONLY ? 'plaintext-only' : 'true');
+    el.setAttribute('spellcheck', 'false');
+
+    el.addEventListener('input', scheduleSave);
+
+    // Every page is a fixed-height sheet, so a stray line break pushes content
+    // out of the printable area. Enter commits the edit instead.
+    el.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        el.blur();
+      }
+    });
+
+    if (!PLAINTEXT_ONLY) {
+      el.addEventListener('paste', function (event) {
+        event.preventDefault();
+        var text = (event.clipboardData || window.clipboardData).getData('text');
+        document.execCommand('insertText', false, text.replace(/\s*\n\s*/g, ' '));
+      });
+    }
+  });
 
   /* ---- logo ------------------------------------------------------------ */
 
@@ -454,7 +572,7 @@
       try {
         localStorage.setItem(LOGO_KEY, reader.result);
       } catch (err) {
-        alert('The logo is too large to be remembered between sessions, but it is applied to this document.');
+        alert('El logo es muy grande para recordarlo entre sesiones, pero quedó aplicado a este documento.');
       }
     };
     reader.readAsDataURL(file);
@@ -473,6 +591,7 @@
 
   document.getElementById('btn-pdf').addEventListener('click', function () {
     var state = readInputs();
+    // window.print() names the saved file after the document title.
     document.title = 'Cotizacion-' + slug(state.numero) + '-' + slug(state.cliente);
     window.print();
   });
@@ -484,7 +603,16 @@
   /* ---- wiring ---------------------------------------------------------- */
 
   document.getElementById('btn-reset').addEventListener('click', function () {
+    var edited = editables.some(function (el) {
+      return el.textContent !== baseline[el.dataset.t];
+    });
+    if (edited && !window.confirm(
+      'Esto descarta los valores y también todos los textos que hayas editado en el documento. ¿Continuar?'
+    )) return;
+
     writeInputs(DEFAULTS);
+    applyTexts(null);
+    saveTexts();
     render();
   });
 
@@ -493,13 +621,8 @@
     el.addEventListener('change', render);
   });
 
-  var initial = DEFAULTS;
-  try {
-    var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (saved && typeof saved === 'object') initial = Object.assign({}, DEFAULTS, saved);
-  } catch (err) { /* corrupt or absent — fall back to defaults */ }
-
-  writeInputs(initial);
+  writeInputs(Object.assign({}, DEFAULTS, read(STORAGE_KEY, null) || {}));
+  applyTexts(read(TEXT_KEY, null));
   render();
 })();
 </script>
