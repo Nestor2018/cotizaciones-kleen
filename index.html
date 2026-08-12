@@ -155,6 +155,19 @@
   }
   .line:hover .line-del{opacity:1}
   .line-del:hover{color:#B3261E;border-color:#B3261E}
+  /* Positioned against the sheet and placed only after the sheet has been
+     measured, so this control can sit under the table without its height
+     counting towards what fits on the page. */
+  .line-add{
+    position:absolute;
+    font:inherit;font-size:12.5px;font-weight:600;
+    font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 14px;border-radius:999px;cursor:pointer;
+    background:#fff;border:1px dashed #9cc3ba;color:var(--brand);
+    transition:border-color .15s,background .15s;
+  }
+  .line-add:hover{border-color:var(--brand);background:#f2f8f6}
 
   @page{size:letter;margin:0}
   @media print{
@@ -166,7 +179,7 @@
     /* No trace of the editing affordances in the PDF. */
     [data-t],[data-cell]{background:none !important;box-shadow:none !important;outline:none !important}
     [data-t]:empty::before,[data-cell]:empty::before{content:"" !important}
-    .line-del{display:none !important}
+    .line-del,.line-add{display:none !important}
   }
 </style>
 </head>
@@ -670,6 +683,32 @@
     overflowWarn.hidden = !overflowed;
     updateTotals();
     markLastPage();
+    placeInlineAdd();
+  }
+
+  // Sits under the last row of the table, which is where you look for it when
+  // you want one more service. Attached after pagination and positioned against
+  // the sheet, never inside the measured column.
+  var inlineAdd = document.createElement('button');
+  inlineAdd.type = 'button';
+  inlineAdd.className = 'line-add';
+  inlineAdd.textContent = '+ Agregar servicio';
+
+  function placeInlineAdd() {
+    var tables = sheetsHost.querySelectorAll('.lines');
+    if (!tables.length) { inlineAdd.remove(); return; }
+
+    var table = tables[tables.length - 1];
+    var page = table.closest('.page');
+    var top = table.offsetTop + table.offsetHeight + 10;
+
+    // The sheet clips whatever sticks out, so drop the button when the table
+    // runs to the bottom; the one in the toolbar still works.
+    if (top + 36 > page.clientHeight) { inlineAdd.remove(); return; }
+
+    inlineAdd.style.top = top + 'px';
+    inlineAdd.style.left = table.offsetLeft + 'px';
+    page.appendChild(inlineAdd);
   }
 
   function markLastPage() {
@@ -782,7 +821,7 @@
     paginate();
   });
 
-  document.getElementById('btn-add-line').addEventListener('click', function () {
+  function addLine() {
     var last = lines[lines.length - 1];
     lines.push({
       servicio: 'Servicio',
@@ -802,7 +841,10 @@
     var selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
-  });
+  }
+
+  document.getElementById('btn-add-line').addEventListener('click', addLine);
+  inlineAdd.addEventListener('click', addLine);
 
   /* ---- logo ------------------------------------------------------------ */
 
