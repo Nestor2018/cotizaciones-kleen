@@ -41,12 +41,16 @@ el archivo sigue ahí. **Restablecer** vuelve a los valores y textos iniciales.
 La columna **Costo quincenal** es **por unidad**, no el total de la línea: la
 cantidad la multiplica.
 
-## Cuánto entra en la hoja
+## Paginación
 
-La hoja es de alto fijo (Carta), así que las líneas no son infinitas en la
-práctica: entran **3 con el bloque de firma visible y 5 sin él**. Al pasarse
-aparece un aviso en la barra superior, porque lo que sobresale se recorta en el
-PDF en vez de saltar a otra página.
+La cotización no es una hoja sino las que hagan falta. Al agregar servicios, el
+documento se repagina solo: las filas que no entran continúan en una hoja nueva
+con el encabezado de tabla repetido, y los bloques de cierre (totales, servicios
+incluidos, condiciones y firma) se acomodan detrás.
+
+Las hojas se arman midiendo: se va colocando bloque por bloque y fila por fila
+en la hoja actual y, cuando una no entra, se abre la siguiente. Por eso lo que
+se ve en pantalla es exactamente lo que sale impreso.
 
 ## Notas técnicas
 
@@ -71,10 +75,21 @@ PDF en vez de saltar a otra página.
   con el 0,16 fijo en el código: editar el rótulo no habría cambiado la cuenta.
 - **Las celdas numéricas se reformatean al salir del campo, nunca al tipear.**
   Reescribir el nodo bajo el cursor mandaría el cursor al principio de la celda.
-- **El aviso de desborde mide el pie contra el borde de la hoja**, no
-  `scrollHeight`. Un ítem flex no se encoge por debajo de su contenido
-  (`min-height: auto`), así que la columna crece con las filas y nunca reporta
-  desborde; lo que sí se desplaza es el pie que va debajo.
+- **La columna de contenido lleva `min-height: 0` junto con `overflow: hidden`.**
+  Sin eso un ítem flex no se encoge por debajo de su contenido, la columna crece
+  con las filas en vez de desbordar, y `scrollHeight` nunca delata que el
+  contenido dejó de entrar: la paginación mediría siempre "entra" y nunca
+  abriría una hoja nueva.
+- **Los bloques se mueven entre hojas, no se clonan**, así conservan su
+  identidad y el texto que se les editó. Se guardan por referencia desde el
+  arranque: entre una paginación y otra viven dentro de las hojas, de modo que
+  buscarlos por selector en su contenedor de origen los perdería y la siguiente
+  paginación los destruiría junto con las hojas que reconstruye.
+- **Lo que sí se clona** es el encabezado de tabla de las hojas de continuación
+  y el pie de cada hoja; a las copias se les quita el `data-t` para que el
+  original siga siendo la única fuente editable de ese texto.
+- **La repaginación no corre en cada tecla**, sino al salir del campo: mover el
+  nodo que tiene el cursor lo expulsaría en medio de la escritura.
 - El archivo no contiene datos reales de clientes ni tarifas: los valores por
   defecto son genéricos y lo que se escribe vive sólo en el navegador.
 
